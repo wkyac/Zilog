@@ -27,17 +27,19 @@ Available commands are:
 >
 ```
 
+<<<<<<< HEAD
 ### Task List (for v1.0)
 - [ ] Finish implementing the main instruction set.
- - [ ] rra
- - [ ] rla
- - [ ] srl
- - [ ] daa
- - [ ] cpl
- - [ ] cff
- - [ ] scf
- - [ ] di
- - [ ] ei
- - [ ] Flags for various instructions (add, sub)
+- [ ] rra
+- [ ] rla
+- [ ] srl
+- [ ] daa
+- [ ] cpl
+- [ ] cff
+- [ ] scf
+- [ ] di
+- [ ] ei
+- [ ] Flags for various instructions (add, sub)
 - [ ] Validate insturction set for correctness.
 - [ ] Insert proper timings for instructions to more closely emulate the Z80
+- [ ] Implement 'printmem'
