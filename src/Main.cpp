@@ -464,7 +464,7 @@ int main(int argc, char* argv[]) {
             case HELP: helptext(); break;
             case DISASSEMBLE: disassemble_file(); break;
             case LOAD_PGRM: load_file(state); break;
-            case PRINT_MEM: std::cout << "print_mem" << std::endl; break;
+            case PRINT_MEM: printmem(state); break;
             case CLEAR_MEM: clearmem(state); break;
             case RESET: done = reset(state); break;
             case RUN: 
@@ -474,16 +474,6 @@ int main(int argc, char* argv[]) {
         }
         
     } while (a != EXIT);
-    
-    /*
-    // Insert a program into memory
-    //readfiletomem(state, filename, 0x00000);
-    // Insert a value at an address in memory
-    //state->memory[0x00100] = 0x76;
-    while (done == 0)
-        done = emulate(state);
-    }
-    */
     return 0;
 }
 
@@ -491,7 +481,8 @@ int main(int argc, char* argv[]) {
 int emulate(State* state) {
     int halt = 0;
     unsigned char *opcode = &state->memory[state->pc];
-    printf("%02x %02x \n", state->pc, *opcode);
+    printf("%04x ", pc);
+    printf("%x \n", *opcode);
     switch(*opcode) {
         case 0x00: break;                          
         case 0x01: state->bc = ld16(state->bc, opcode[1], opcode[2]); state->pc += 2; break;        
@@ -787,27 +778,30 @@ void bad_inst(State* state) {
 
 void helptext() {
     std::cout << "Available commands are: \n";
-    std::cout << "\thelp\t\t -- Displays this message.\n";
-    std::cout << "\tdisassemble\t -- Starts a prompt for disassembling a file.\n";
-    std::cout << "\tload\t\t -- Loads a file into memory starting at the given position.\n";
-    std::cout << "\tprintmem\t -- Displays an ncurses window of the current memory of the machine.\n";
-    std::cout << "\tclearmem\t -- Zeroes out memory.\n";
-    std::cout << "\trun\t\t -- Runs whatever is currently loaded into memory.\n";
-    std::cout << "\treset\t\t -- Resets the program counter.\n";
-    std::cout << "\texit\t\t -- Exits the program.\n";
+    std::cout << "help\t\t -- Displays this message.\n";
+    std::cout << "disassemble\t -- Starts a prompt for disassembling a file.\n";
+    std::cout << "load\t\t -- Loads a file into memory starting at the given position.\n";
+    std::cout << "printmem\t -- Displays an ncurses window of the current memory of the machine.\n";
+    std::cout << "clearmem\t -- Zeroes out memory.\n";
+    std::cout << "run\t\t -- Runs whatever is currently loaded into memory.\n";
+    std::cout << "reset\t\t -- Resets the program counter.\n";
+    std::cout << "exit\t\t -- Exits the program.\n";
 }
 
 // Dissassemble file
 int disassemble_file() {
     Disassembler d;
+    std::string filename;
+    std::string path = "../ROMS/";
     std::cout << "Please enter the name of the file you wish to disassemble: \n";
-    std::string file;
-    std::cin >> file;
+    std::cin >> filename;
+    filename.insert(0, path);
+    const char* cfilename = filename.c_str();
 
     std::streampos begin,end, size;
     char * memblock;
 
-    std::ifstream input(""+ file, std::ios::binary);
+    std::ifstream input(cfilename, std::ios::binary);
     begin = input.tellg();
     input.seekg(0,std::ios::end);
     end = input.tellg();
@@ -819,14 +813,14 @@ int disassemble_file() {
     std::cout << "Filesize is " + (end-begin) << std::endl;
 
     if (input.is_open()) {
-    std::cout << file+" opened successfully."  << std::endl;
+    std::cout << filename + " opened successfully." << std::endl;
         pc = 0;
         while(pc < size) {
             pc += d.disassemble((unsigned char *)memblock,pc);
         }
     }
     input.close();
-    std::cout << file+" closed successfully."  << std::endl;
+    std::cout << filename + " closed successfully." << std::endl;
     return 0;
 }
 
@@ -862,7 +856,19 @@ int load_file(State *state) {
 }
 
 void printmem(State *state) {
-    for(int i = 0; i < 0x104; i++) {
+    std::cout << "(Protip: Use hex values [e.g 0x10, 0xFE])" << std::endl;
+    
+    std::string str_start;
+    std::string str_end;
+    std::cout << "Start?";
+    std::cin >> str_start;
+    std::cout << "End?";
+    std::cin >> str_end;
+    
+    uint32_t start = std::stoul(str_start,nullptr,0);
+    uint32_t end = std::stoul(str_end,nullptr,0);
+
+    for(int i = start; i <end; i++) {
         unsigned char c = ((char*)state->memory)[i];
         if(i % 40 == 0)
             std::cout << std::endl;
