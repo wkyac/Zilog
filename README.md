@@ -27,7 +27,6 @@ Available commands are:
 >
 ```
 
-<<<<<<< HEAD
 ### Task List (for v1.0)
 - [ ] Finish implementing the main instruction set.
 - [ ] rra
