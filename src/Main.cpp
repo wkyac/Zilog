@@ -1,11 +1,15 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
+#include <readline/history.h>
+#include <readline/readline.h>
 
 #include "Disassembler.hpp"
 
 int counter;
 uint16_t pc;
+char* input[2048];
 
 struct Flags {    
     uint8_t    z:1;     // Zero - Set if result is 0
@@ -56,15 +60,18 @@ struct State {
 };
 
 // z80 functions
-int disassemble_file();
-int load_file(State* state);
+int disassemble_file(std::vector<std::string> args);
+int load_file(State* state, std::vector<std::string> args);
 int emulate(State *state);
 State* z80init(void);
 void bad_inst(State *state);
 void clearmem(State *state);
-void printmem(State *state);
+void printmem(State *state, std::vector<std::string> args);
 void helptext();
 int reset(State *state);
+
+//tokenize
+std::vector<std::string> tokenize(const char*, char c);
 
 // Auxilliary Emulator functions
 uint8_t flagstoInt(State *state) {
@@ -419,7 +426,6 @@ void rst(unsigned char opcode, State *state) {
 void nop();
 void halt();
 
-
 // User prompts
 enum Actions {
     EXIT,
@@ -429,7 +435,8 @@ enum Actions {
     CLEAR_MEM,
     PRINT_MEM,
     RUN,
-    RESET
+    RESET,
+    DEFAULT
 };
 
 int main(int argc, char* argv[]) {
@@ -439,32 +446,38 @@ int main(int argc, char* argv[]) {
     std::cout << "Z80 State Initialized" << std::endl;
     std::cout << state->mem_size << "KB Available" << std::endl;
     std::cout << "Welcome. For help, enter \"help\"." << std::endl;
-    Actions a; 
-    
-    state->memory[0x00100] = 0x76;
+    Actions a;
+
+    /*
+    const char *str = "this is a string";
+    std::vector<std::string> test;
+    test = tokenize(str,' '); 
+    for (auto i = test.begin(); i != test.end(); ++i)
+        std::cout << *i << ' ';
+    */
 
     // Prompt Loop
     do {  
-        std::cout << ">";
-        std::string prompt;
-        std::cin >> prompt;
+        char* input = readline(">");
+        add_history(input);
+        std::vector<std::string> args = tokenize(input, ' ');
 
-        if(prompt == "exit") {a = EXIT;}
-        else if (prompt == "help") {a = HELP;}
-        else if (prompt == "disassemble") {a = DISASSEMBLE;}
-        else if (prompt == "load") {a = LOAD_PGRM;}
-        else if (prompt == "printmem") {a = PRINT_MEM;}
-        else if (prompt == "clearmem") {a = CLEAR_MEM;}
-        else if (prompt == "run") {a = RUN;}
-        else if (prompt == "reset") {a = RESET;}
-        else { std::cout << "Enter \"help\" for commands." << std::endl; }
-    
+        if(args[0] == "exit") {a = EXIT;}
+        else if (args[0] == "help") {a = HELP;}
+        else if (args[0] == "disassemble") {a = DISASSEMBLE;}
+        else if (args[0] == "load") {a = LOAD_PGRM;}
+        else if (args[0] == "printmem") {a = PRINT_MEM;}
+        else if (args[0] == "clearmem") {a = CLEAR_MEM;}
+        else if (args[0] == "run") {a = RUN;}
+        else if (args[0] == "reset") {a = RESET;}
+        else { std::cout << "Enter \"help\" for commands." << std::endl; a = DEFAULT; }
+        
         switch(a) {
             case EXIT: break;
             case HELP: helptext(); break;
-            case DISASSEMBLE: disassemble_file(); break;
-            case LOAD_PGRM: load_file(state); break;
-            case PRINT_MEM: printmem(state); break;
+            case DISASSEMBLE: disassemble_file(args); break;
+            case LOAD_PGRM: load_file(state, args); break;
+            case PRINT_MEM: printmem(state, args); break;
             case CLEAR_MEM: clearmem(state); break;
             case RESET: done = reset(state); break;
             case RUN: 
@@ -473,6 +486,8 @@ int main(int argc, char* argv[]) {
             default: break;
         }
         
+        free(input);
+
     } while (a != EXIT);
     return 0;
 }
@@ -788,8 +803,22 @@ void helptext() {
     std::cout << "exit\t\t -- Exits the program.\n";
 }
 
+std::vector<std::string> tokenize (const char *str, char c = ' ') {
+    std::vector<std::string> args;
+    do {
+        const char *begin = str;
+        while(*str != c && *str)
+            str++;
+        args.push_back(std::string(begin, str));
+    } 
+    while (0 != *str++);
+    
+    return args;
+}
+
+
 // Dissassemble file
-int disassemble_file() {
+int disassemble_file(std::vector<std::string> args) {
     Disassembler d;
     std::string filename;
     std::string path = "../ROMS/";
@@ -824,21 +853,23 @@ int disassemble_file() {
     return 0;
 }
 
-int load_file(State *state) {
+int load_file(State *state, std::vector<std::string> args) {
+    for(auto i : args)
+        std::cout << i << ' ';
+
     std::string filename;
     std::string path = "../ROMS/";
-    std::cout << "Please enter the name of the file you wish to load: ";
-    std::cin >> filename;
     filename.insert(0, path);
     const char* cfilename = filename.c_str();
+    std::cout << cfilename << std::endl;
 
-    std::string stroffset;
-    std::cout << "Please enter in hex (e.g. 0x10) where you would like to load the file: ";
-    std::cin >> stroffset;
-
+    /*
+    const char* toffset = args[1];
+    std::string stroffset(toffset);
     //str to uint32
     uint32_t offset = std::stoul(stroffset,nullptr,0);
-    std::cout << offset;
+    std::cout << stroffset;
+    */
 
     FILE *f= fopen(cfilename, "rb");
 	if (f==NULL) {
@@ -849,13 +880,13 @@ int load_file(State *state) {
 	int fsize = ftell(f);
 	fseek(f, 0L, SEEK_SET);
 
-	uint8_t *buffer = &state->memory[offset];
+	uint8_t *buffer = &state->memory[0];
 	fread(buffer, fsize, 1, f);
 	fclose(f);
     return 0;
 }
 
-void printmem(State *state) {
+void printmem(State *state, std::vector<std::string> args) {
     std::cout << "(Protip: Use hex values [e.g 0x10, 0xFE])" << std::endl;
     
     std::string str_start;
