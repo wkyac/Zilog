@@ -1,6 +1,9 @@
 # Zilog
 A hobby zilogz80 emulator. Made as an educational project so I could learn about emulation and low-level architecture in general. A special thanks to https://github.com/kpmiller/emulator101 for being a great resource in this endeavor. 
 
+# Dependancies 
+GNU Readline libray: https://tiswww.case.edu/php/chet/readline/rltop.html 
+
 # Installation
 ```
 cd build
